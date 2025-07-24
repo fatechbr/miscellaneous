@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Conversor Base64</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen p-6">
+  <div class="max-w-3xl mx-auto bg-white shadow-lg rounded-xl p-6">
+    <h1 class="text-2xl font-bold mb-4 text-center">Conversor Base64</h1>
+
+    <!-- Abas -->
+    <div class="flex justify-center mb-6">
+      <button id="tab1Btn" class="tab-btn px-4 py-2 font-semibold text-white bg-blue-700 rounded-l">Upload → Base64</button>
+      <button id="tab2Btn" class="tab-btn px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-r">Base64 → Arquivo</button>
+    </div>
+
+    <!-- Conteúdo da Aba 1 -->
+    <div id="tab1" class="tab-content">
+      <label class="block mb-2 font-medium">Selecione um arquivo:</label>
+      <input type="file" id="fileInput" class="mb-4 w-full file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" />
+
+      <button onclick="convertToBase64()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Converter para Base64</button>
+
+      <p class="mt-4 font-medium" id="fileInfo"></p>
+
+      <label class="block mt-4 font-medium">Resultado Base64:</label>
+      <textarea id="output" class="w-full mt-2 p-2 border rounded h-64 resize-none" readonly></textarea>
+
+      <!-- Botão Copiar -->
+      <button onclick="copyBase64()" id="copyBtn" class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+        Copiar Base64
+      </button>
+    </div>
+
+    <!-- Conteúdo da Aba 2 -->
+    <div id="tab2" class="tab-content hidden">
+      <label class="block mb-2 font-medium">Cole o conteúdo em Base64:</label>
+      <textarea id="base64Input" class="w-full p-2 border rounded h-64 resize-none" placeholder="Cole aqui o conteúdo..."></textarea>
+
+      <label class="block mt-4 font-medium">Nome do arquivo com extensão:</label>
+      <input type="text" id="fileName" class="w-full mt-2 p-2 border rounded" placeholder="ex: imagem.png" />
+
+      <button onclick="downloadFile()" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Converter e Baixar</button>
+    </div>
+  </div>
+
+  <script>
+    // Alternar abas
+    const tab1Btn = document.getElementById('tab1Btn');
+    const tab2Btn = document.getElementById('tab2Btn');
+    const tab1 = document.getElementById('tab1');
+    const tab2 = document.getElementById('tab2');
+
+    tab1Btn.addEventListener('click', () => {
+      tab1.classList.remove('hidden');
+      tab2.classList.add('hidden');
+      tab1Btn.classList.add('bg-blue-700');
+      tab2Btn.classList.remove('bg-blue-700');
+      tab2Btn.classList.add('bg-blue-600');
+    });
+
+    tab2Btn.addEventListener('click', () => {
+      tab1.classList.add('hidden');
+      tab2.classList.remove('hidden');
+      tab2Btn.classList.add('bg-blue-700');
+      tab1Btn.classList.remove('bg-blue-700');
+      tab1Btn.classList.add('bg-blue-600');
+    });
+
+    function convertToBase64() {
+      const fileInput = document.getElementById('fileInput');
+      const output = document.getElementById('output');
+      const fileInfo = document.getElementById('fileInfo');
+
+      if (fileInput.files.length === 0) {
+        alert('Selecione um arquivo.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const base64String = e.target.result.split(',')[1];
+        output.value = base64String;
+        fileInfo.textContent = `Arquivo: ${file.name} | Tipo MIME: ${file.type}`;
+      };
+
+      reader.onerror = function() {
+        alert('Erro ao ler o arquivo.');
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function copyBase64() {
+      const output = document.getElementById('output');
+      const copyBtn = document.getElementById('copyBtn');
+
+      if (!output.value.trim()) {
+        alert('Nada para copiar!');
+        return;
+      }
+
+      navigator.clipboard.writeText(output.value).then(() => {
+        copyBtn.textContent = 'Copiado!';
+        copyBtn.classList.remove('bg-blue-600');
+        copyBtn.classList.add('bg-green-600');
+
+        setTimeout(() => {
+          copyBtn.textContent = 'Copiar Base64';
+          copyBtn.classList.remove('bg-green-600');
+          copyBtn.classList.add('bg-blue-600');
+        }, 2000);
+      }).catch(err => {
+        alert('Erro ao copiar: ' + err);
+      });
+    }
+
+    function downloadFile() {
+      const base64Text = document.getElementById('base64Input').value.trim();
+      const fileName = document.getElementById('fileName').value.trim();
+
+      if (!base64Text || !fileName) {
+        alert('Preencha o conteúdo Base64 e o nome do arquivo.');
+        return;
+      }
+
+      let mimeType = '';
+      let base64Data = base64Text;
+
+      if (base64Text.startsWith('data:')) {
+        const matches = base64Text.match(/^data:(.+);base64,(.*)$/);
+        if (!matches || matches.length !== 3) {
+          alert('Formato inválido de Base64 com data URI.');
+          return;
+        }
+        mimeType = matches[1];
+        base64Data = matches[2];
+      }
+
+      try {
+        const byteCharacters = atob(base64Data);
+        const byteArrays = [];
+
+        for (let i = 0; i < byteCharacters.length; i += 512) {
+          const slice = byteCharacters.slice(i, i + 512);
+          const byteNumbers = Array.from(slice, c => c.charCodeAt(0));
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+
+        const blob = new Blob(byteArrays, { type: mimeType || 'application/octet-stream' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        alert('Erro ao converter Base64. Verifique o conteúdo.');
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>
